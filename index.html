@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gym Tracker PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+  text-align: center;
+}
+
+input {
+  padding: 6px;
+  border-radius: 8px;
+  border: none;
+  margin: 3px;
+  width: 70px;
+}
+
+button {
+  padding: 6px;
+  margin: 3px;
+  border: none;
+  border-radius: 8px;
+  background: #1f1f1f;
+  color: white;
+  cursor: pointer;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  background: #1a1a1a;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 12px;
+  width: 270px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🏋️ Gym Tracker PRO</h1>
+
+<div id="login">
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+</div>
+
+<div id="app" style="display:none;">
+
+<input type="text" id="busca" placeholder="Buscar..." oninput="render()">
+
+<div>
+  <button onclick="setGrupo('todos')">Todos</button>
+  <button onclick="setGrupo('peito')">Peito</button>
+  <button onclick="setGrupo('costas')">Costas</button>
+  <button onclick="setGrupo('biceps')">Bíceps</button>
+  <button onclick="setGrupo('triceps')">Tríceps</button>
+  <button onclick="setGrupo('perna')">Perna</button>
+  <button onclick="setGrupo('ombro')">Ombro</button>
+  <button onclick="setGrupo('peso_livre')">Peso Livre</button>
+  <button onclick="toggleFav()">⭐ Favoritos</button>
+  <button onclick="resetHidden()">🔄 Restaurar</button>
+</div>
+
+<div class="container" id="lista"></div>
+
+</div>
+
+<script>
+
+let usuario="";
+let mostrarFav=false;
+
+function login(){
+  const u=document.getElementById("user").value;
+  const p=document.getElementById("pass").value;
+
+  if(!u||!p){alert("Preenche tudo");return;}
+
+  usuario=u;
+  localStorage.setItem("user",usuario);
+
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="block";
+
+  render();
+}
+
+window.onload=function(){
+  const u=localStorage.getItem("user");
+  if(u){
+    usuario=u;
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
+    render();
+  }
+};
+
+function gerarId(nome){
+  return nome.normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"")
+  .replace(/\s+/g,"_")
+  .replace(/[^\w]/g,"");
+}
+
+function getKey(nome){
+  return usuario+"_"+nome;
+}
+
+let grupoAtual="todos";
+
+function setGrupo(g){
+  grupoAtual=g;
+  mostrarFav=false;
+  render();
+}
+
+function toggleFav(){
+  mostrarFav=!mostrarFav;
+  render();
+}
+
+function resetHidden(){
+  Object.keys(localStorage).forEach(k=>{
+    if(k.includes("_hidden")) localStorage.removeItem(k);
+  });
+  render();
+}
+
+const maquinas = [
+
+/* ================= PEITO ================= */
+{nome:"Supino Reto Máquina",grupo:"peito"},
+{nome:"Supino Inclinado Máquina",grupo:"peito"},
+{nome:"Supino Declinado Máquina",grupo:"peito"},
+{nome:"Supino Articulado",grupo:"peito"},
+{nome:"Supino Unilateral Máquina",grupo:"peito"},
+{nome:"Chest Press",grupo:"peito"},
+{nome:"Chest Press Inclinado",grupo:"peito"},
+{nome:"Chest Press Declinado",grupo:"peito"},
+{nome:"Iso Lateral Chest Press",grupo:"peito"},
+{nome:"Plate Loaded Chest Press",grupo:"peito"},
+{nome:"Peck Deck",grupo:"peito"},
+{nome:"Crucifixo Máquina",grupo:"peito"},
+{nome:"Crucifixo Inclinado Máquina",grupo:"peito"},
+{nome:"Crucifixo Declinado Máquina",grupo:"peito"},
+{nome:"Crossover Polia Alta",grupo:"peito"},
+{nome:"Crossover Polia Média",grupo:"peito"},
+{nome:"Crossover Polia Baixa",grupo:"peito"},
+{nome:"Press Horizontal Máquina",grupo:"peito"},
+{nome:"Press Vertical Máquina",grupo:"peito"},
+{nome:"Chest Fly Machine",grupo:"peito"},
+{nome:"Decline Press Machine",grupo:"peito"},
+{nome:"Incline Press Machine",grupo:"peito"},
+{nome:"Hammer Strength Chest Press",grupo:"peito"},
+{nome:"Hammer Strength Incline Press",grupo:"peito"},
+{nome:"Hammer Strength Decline Press",grupo:"peito"},
+
+/* ================= COSTAS ================= */
+{nome:"Puxada Alta",grupo:"costas"},
+{nome:"Puxada Frente",grupo:"costas"},
+{nome:"Puxada Neutra",grupo:"costas"},
+{nome:"Pulldown",grupo:"costas"},
+{nome:"Pulldown Articulado",grupo:"costas"},
+{nome:"Remada Máquina",grupo:"costas"},
+{nome:"Remada Baixa",grupo:"costas"},
+{nome:"Remada Alta Máquina",grupo:"costas"},
+{nome:"Remada Curvada Máquina",grupo:"costas"},
+{nome:"Remada Articulada",grupo:"costas"},
+{nome:"Remada Unilateral Máquina",grupo:"costas"},
+{nome:"Remada Cavalinho Máquina",grupo:"costas"},
+{nome:"Pullover Máquina",grupo:"costas"},
+{nome:"High Row Máquina",grupo:"costas"},
+{nome:"Low Row Máquina",grupo:"costas"},
+{nome:"Lat Pulldown Wide Grip",grupo:"costas"},
+{nome:"Lat Pulldown Close Grip",grupo:"costas"},
+{nome:"Lat Pulldown Reverse Grip",grupo:"costas"},
+{nome:"Seated Row Machine",grupo:"costas"},
+{nome:"Iso Lateral Row",grupo:"costas"},
+{nome:"Hammer Strength Row",grupo:"costas"},
+{nome:"Hammer Strength High Row",grupo:"costas"},
+
+/* ================= BÍCEPS ================= */
+{nome:"Rosca Máquina",grupo:"biceps"},
+{nome:"Rosca Scott Máquina",grupo:"biceps"},
+{nome:"Rosca Scott Articulada",grupo:"biceps"},
+{nome:"Rosca Alternada Máquina",grupo:"biceps"},
+{nome:"Rosca Unilateral Máquina",grupo:"biceps"},
+{nome:"Rosca Cabo",grupo:"biceps"},
+{nome:"Bíceps Máquina Articulada",grupo:"biceps"},
+{nome:"Preacher Curl Machine",grupo:"biceps"},
+{nome:"Cable Curl Machine",grupo:"biceps"},
+
+/* ================= TRÍCEPS ================= */
+{nome:"Tríceps Polia",grupo:"triceps"},
+{nome:"Tríceps Polia Corda",grupo:"triceps"},
+{nome:"Tríceps Barra Reta",grupo:"triceps"},
+{nome:"Tríceps Testa Máquina",grupo:"triceps"},
+{nome:"Tríceps Articulado",grupo:"triceps"},
+{nome:"Mergulho Máquina",grupo:"triceps"},
+{nome:"Paralela Assistida",grupo:"triceps"},
+{nome:"Dip Machine",grupo:"triceps"},
+{nome:"Triceps Extension Machine",grupo:"triceps"},
+
+/* ================= PERNA ================= */
+{nome:"Leg Press 45°",grupo:"perna"},
+{nome:"Leg Press Horizontal",grupo:"perna"},
+{nome:"Leg Press Vertical",grupo:"perna"},
+{nome:"Leg Press Unilateral",grupo:"perna"},
+{nome:"Hack Machine",grupo:"perna"},
+{nome:"Hack Invertido",grupo:"perna"},
+{nome:"Smith Machine",grupo:"perna"},
+{nome:"Cadeira Extensora",grupo:"perna"},
+{nome:"Extensora Unilateral",grupo:"perna"},
+{nome:"Cadeira Flexora",grupo:"perna"},
+{nome:"Mesa Flexora",grupo:"perna"},
+{nome:"Flexora Unilateral",grupo:"perna"},
+{nome:"Glúteo Máquina",grupo:"perna"},
+{nome:"Glúteo Coice Máquina",grupo:"perna"},
+{nome:"Adutora",grupo:"perna"},
+{nome:"Abdutora",grupo:"perna"},
+{nome:"Panturrilha em Pé",grupo:"perna"},
+{nome:"Panturrilha Sentado",grupo:"perna"},
+{nome:"Panturrilha no Leg Press",grupo:"perna"},
+{nome:"Donkey Calf Raise",grupo:"perna"},
+{nome:"Hip Thrust Máquina",grupo:"perna"},
+{nome:"Glute Bridge Máquina",grupo:"perna"},
+{nome:"Standing Leg Curl Machine",grupo:"perna"},
+{nome:"Seated Leg Curl Machine",grupo:"perna"},
+
+/* ================= OMBRO ================= */
+{nome:"Desenvolvimento Máquina",grupo:"ombro"},
+{nome:"Desenvolvimento Articulado",grupo:"ombro"},
+{nome:"Desenvolvimento Unilateral",grupo:"ombro"},
+{nome:"Elevação Lateral Máquina",grupo:"ombro"},
+{nome:"Elevação Lateral Unilateral",grupo:"ombro"},
+{nome:"Elevação Frontal Máquina",grupo:"ombro"},
+{nome:"Peck Deck Inverso",grupo:"ombro"},
+{nome:"Crucifixo Inverso Máquina",grupo:"ombro"},
+{nome:"Shoulder Press",grupo:"ombro"},
+{nome:"Rear Delt Machine",grupo:"ombro"},
+
+/* ================= PESO LIVRE ================= */
+{nome:"Elevação Lateral (Halter)",grupo:"peso_livre"},
+{nome:"Elevação Frontal (Halter)",grupo:"peso_livre"},
+{nome:"Desenvolvimento (Halter)",grupo:"peso_livre"},
+{nome:"Supino com Halter",grupo:"peso_livre"},
+{nome:"Supino Inclinado com Halter",grupo:"peso_livre"},
+{nome:"Crucifixo com Halter",grupo:"peso_livre"},
+{nome:"Rosca Bíceps com Halter",grupo:"peso_livre"},
+{nome:"Rosca Martelo",grupo:"peso_livre"},
+{nome:"Rosca Concentrada",grupo:"peso_livre"},
+{nome:"Tríceps Testa (Barra)",grupo:"peso_livre"},
+{nome:"Tríceps Coice",grupo:"peso_livre"},
+{nome:"Agachamento Livre",grupo:"peso_livre"},
+{nome:"Agachamento Frontal",grupo:"peso_livre"},
+{nome:"Levantamento Terra",grupo:"peso_livre"},
+{nome:"Terra Romeno",grupo:"peso_livre"},
+{nome:"Afundo (Lunge)",grupo:"peso_livre"},
+{nome:"Passada",grupo:"peso_livre"},
+{nome:"Remada Curvada",grupo:"peso_livre"},
+{nome:"Encolhimento de Ombro",grupo:"peso_livre"},
+{nome:"Barra Fixa",grupo:"peso_livre"},
+{nome:"Paralela Livre",grupo:"peso_livre"}
+
+];
+
+function render(){
+  const lista=document.getElementById("lista");
+  const busca=document.getElementById("busca").value.toLowerCase();
+  lista.innerHTML="";
+
+  maquinas
+  .filter(m=>grupoAtual==="todos"||m.grupo===grupoAtual)
+  .filter(m=>m.nome.toLowerCase().includes(busca))
+  .forEach(m=>{
+
+    if(localStorage.getItem(getKey(m.nome)+"_hidden")==="true") return;
+
+    const fav=localStorage.getItem(getKey(m.nome)+"_fav")==="true";
+    if(mostrarFav && !fav) return;
+
+    const peso=localStorage.getItem(getKey(m.nome))||"";
+    const hist=JSON.parse(localStorage.getItem(getKey(m.nome)+"_hist"))||[];
+    const meta=localStorage.getItem(getKey(m.nome)+"_meta")||"";
+    const recorde=hist.length?Math.max(...hist):0;
+
+    const id=gerarId(m.nome);
+
+    const card=document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <h3>${m.nome} ${fav?"⭐":""}</h3>
+      <p>🏆 ${recorde}kg</p>
+
+      <input id="${id}" type="number" value="${peso}" placeholder="Peso">
+      <button onclick="salvar('${m.nome}')">Salvar</button>
+
+      <br>
+
+      <input id="series-${id}" placeholder="Séries">
+      <input id="reps-${id}" placeholder="Reps">
+      <input id="rest-${id}" placeholder="Descanso">
+
+      <br>
+
+      <input id="meta-${id}" value="${meta}" placeholder="Meta">
+      <button onclick="salvarMeta('${m.nome}')">🎯</button>
+
+      <br>
+
+      <button onclick="favoritar('${m.nome}')">⭐</button>
+      <button onclick="ocultar('${m.nome}')">❌</button>
+
+      <br>
+
+      <button onclick="verGrafico('${m.nome}')">📈</button>
+      <canvas id="graf-${id}"></canvas>
+    `;
+
+    lista.appendChild(card);
+  });
+}
+
+function salvar(nome){
+  const val=document.getElementById(gerarId(nome)).value;
+  if(!val) return;
+
+  localStorage.setItem(getKey(nome),val);
+
+  let hist=JSON.parse(localStorage.getItem(getKey(nome)+"_hist"))||[];
+  hist.push(Number(val));
+  localStorage.setItem(getKey(nome)+"_hist",JSON.stringify(hist));
+
+  render();
+}
+
+function salvarMeta(nome){
+  const val=document.getElementById("meta-"+gerarId(nome)).value;
+  localStorage.setItem(getKey(nome)+"_meta",val);
+  render();
+}
+
+function favoritar(nome){
+  const atual=localStorage.getItem(getKey(nome)+"_fav")==="true";
+  localStorage.setItem(getKey(nome)+"_fav",!atual);
+  render();
+}
+
+function ocultar(nome){
+  localStorage.setItem(getKey(nome)+"_hidden",true);
+  render();
+}
+
+function verGrafico(nome){
+  const ctx=document.getElementById("graf-"+gerarId(nome));
+  const hist=JSON.parse(localStorage.getItem(getKey(nome)+"_hist"))||[];
+
+  if(hist.length===0){alert("Sem dados");return;}
+
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:hist.map((_,i)=>"Treino "+(i+1)),
+      datasets:[{label:"Peso",data:hist}]
+    }
+  });
+}
+
+</script>
+
+</body>
+</html>
